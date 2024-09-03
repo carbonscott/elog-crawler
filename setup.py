@@ -22,6 +22,7 @@ setuptools.setup(
     entry_points = {
         'console_scripts' : [
             'elog-crawler.file_manager=elog_crawler.app_crawl_file_manager:main',
+            'elog-crawler.elog=elog_crawler.app_crawl_elog:main',
         ],
     },
     python_requires='>=3.6',
