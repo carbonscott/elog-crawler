@@ -60,23 +60,16 @@ def save_to_csv(data, experiment_id):
 def main():
     parser = argparse.ArgumentParser(description='Crawl file manager.')
     parser.add_argument('exp', help='Experiment ID')
-    parser.add_argument('--save-credentials', action='store_true', help='Save new credentials')
+    parser.add_argument('--reset-credentials', action='store_true', help='Reset saved credentials')
     args = parser.parse_args()
 
     store = CredentialStore()
 
-    if args.save_credentials:
-        store.save_credentials()
-        print("Credentials saved. Please run the script again without --save-credentials to use them.")
+    if args.reset_credentials:
+        store.delete_credentials()
         return
 
-    try:
-        credentials = store.load_credentials()
-        username = credentials['username']
-        password = credentials['password']
-    except FileNotFoundError:
-        print("Credentials not found. Please run the script with --save-credentials to set them up.")
-        return
+    username, password = store.get_credentials()
 
     driver = setup_driver()
     driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{args.exp}/fileManager')
