@@ -23,22 +23,28 @@ def setup_driver(headless=True):
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=chrome_options)
 
-def login(driver, username, password):
-    s3df_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Log in with S3DF (unix)')]"))
-    )
-    s3df_button.click()
+def login_if_necessary(driver, username, password):
+    try:
+        # Check if the login button is present
+        login_button = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Log in with S3DF (unix)')]"))
+        )
+        login_button.click()
 
-    username_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "login"))
-    )
-    username_field.send_keys(username)
-    password_field = driver.find_element(By.ID, "password")
-    password_field.send_keys(password)
+        username_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "login"))
+        )
+        username_field.send_keys(username)
+        password_field = driver.find_element(By.ID, "password")
+        password_field.send_keys(password)
 
-    submit_button = driver.find_element(By.ID, "submit-login")
-    submit_button.click()
-
+        submit_button = driver.find_element(By.ID, "submit-login")
+        submit_button.click()
+        print("Logged in successfully.")
+    except TimeoutException:
+        print("Login page not detected. User might already be logged in.")
+    except NoSuchElementException:
+        print("Login elements not found. Page structure might have changed or user is already logged in.")
 
 def scroll_to_bottom(driver):
     SCROLL_PAUSE_TIME = 1  # Increased pause time to allow content to load
@@ -64,6 +70,22 @@ def scroll_to_bottom(driver):
                 break
         last_height = new_height
 
+def process_experiment(driver, experiment_id, username, password):
+    print(f"Processing experiment: {experiment_id}")
+    driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{experiment_id}/fileManager')
+
+    login_if_necessary(driver, username, password)
+
+    try:
+        scroll_to_bottom(driver)
+        data = extract_data(driver)
+        for entry in data:
+            print(entry)
+        save_to_csv(data, experiment_id)
+    except TimeoutException:
+        print(f"Timed out waiting for the content to load for experiment {experiment_id}.")
+        driver.save_screenshot(f'timeout_screenshot_{experiment_id}.png')
+
 def extract_data(driver):
     rows = WebDriverWait(driver, 30).until(
         EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.fdat'))
@@ -86,7 +108,7 @@ def save_to_csv(data, experiment_id):
 
 def main():
     parser = argparse.ArgumentParser(description='Crawl file manager.')
-    parser.add_argument('exp', help='Experiment ID')
+    parser.add_argument('experiments', nargs='+', help='Experiment IDs (space-separated)')
     parser.add_argument('--reset-credentials', action='store_true', help='Reset saved credentials')
     parser.add_argument('--gui', action='store_true', help='Run with GUI (non-headless mode)')
     args = parser.parse_args()
@@ -100,19 +122,10 @@ def main():
     username, password = store.get_credentials()
 
     driver = setup_driver(headless=not args.gui)
-    driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{args.exp}/fileManager')
 
     try:
-        login(driver, username, password)
-
-        scroll_to_bottom(driver)
-        data = extract_data(driver)
-
-        for entry in data:
-            print(entry)
-
-        save_to_csv(data, args.exp)
-
+        for experiment_id in args.experiments:
+            process_experiment(driver, experiment_id, username, password)
     except TimeoutException:
         print("Timed out waiting for the content to load.")
         driver.save_screenshot('timeout_screenshot.png')
