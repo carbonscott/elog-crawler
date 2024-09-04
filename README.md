@@ -1,3 +1,10 @@
+### Install
+
+```bash
+pip install git+https://https://github.com/carbonscott/elog-crawler
+```
+
+
 ### Usage
 
 It will ask for login credential the first time you run it.
