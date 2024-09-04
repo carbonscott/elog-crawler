@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "elog-crawler"
+version = "24.09.02"
+description = "An elog crawler."
+readme = "README.md"
+readme-content-type = "text/markdown"
+requires-python = ">=3.6"
+authors = [
+    { name = "Cong Wang", email = "wangimagine@gmail.com" }
+]
+license = { text = "MIT" }
+keywords = ["LCLS", "eLog"]
+homepage = "https://github.com/carbonscott/peaknet"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "selenium>=4.0.0",
+    "webdriver-manager>=3.5.0",
+    "pandas>=1.0.0",
+    "humanfriendly>=9.0",
+    "cryptography>=3.4.7",
+]
+
+[project.scripts]
+elog-crawler.file_manager = "elog_crawler.app_crawl_file_manager:main"
+elog-crawler.elog = "elog_crawler.app_crawl_elog:main"
+
+[tool.setuptools.packages]
+find = {}
