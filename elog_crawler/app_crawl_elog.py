@@ -12,11 +12,12 @@ import argparse
 import time
 from .credential_store import CredentialStore
 
-def setup_driver():
+def setup_driver(headless=True):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920x1080")
+    if headless:
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920x1080")
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=chrome_options)
 
@@ -93,6 +94,7 @@ def main():
     parser = argparse.ArgumentParser(description='Crawl experiment logbook.')
     parser.add_argument('exp', help='Experiment ID')
     parser.add_argument('--reset-credentials', action='store_true', help='Reset saved credentials')
+    parser.add_argument('--gui', action='store_true', help='Run with GUI (non-headless mode)')
     args = parser.parse_args()
 
     store = CredentialStore()
@@ -103,7 +105,7 @@ def main():
 
     username, password = store.get_credentials()
 
-    driver = setup_driver()
+    driver = setup_driver(headless=not args.gui)
     driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{args.exp}/eLog')
 
     try:

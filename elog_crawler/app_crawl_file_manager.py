@@ -10,14 +10,16 @@ from webdriver_manager.chrome import ChromeDriverManager
 import os
 import humanfriendly
 import argparse
+import time
 import pandas as pd
 from .credential_store import CredentialStore
 
-def setup_driver():
+def setup_driver(headless=True):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920x1080")
+    if headless:
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920x1080")
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=chrome_options)
 
@@ -36,6 +38,31 @@ def login(driver, username, password):
 
     submit_button = driver.find_element(By.ID, "submit-login")
     submit_button.click()
+
+
+def scroll_to_bottom(driver):
+    SCROLL_PAUSE_TIME = 1  # Increased pause time to allow content to load
+    last_height = driver.execute_script("return document.body.scrollHeight")
+
+    while True:
+        # Scroll down to bottom
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        # Wait to load page
+        time.sleep(SCROLL_PAUSE_TIME)
+
+        # Calculate new scroll height and compare with last scroll height
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            # If heights are the same, it's likely the end of the page
+            # Try scrolling one more time to be sure
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(SCROLL_PAUSE_TIME)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                # If still the same, we've reached the bottom
+                break
+        last_height = new_height
 
 def extract_data(driver):
     rows = WebDriverWait(driver, 30).until(
@@ -61,6 +88,7 @@ def main():
     parser = argparse.ArgumentParser(description='Crawl file manager.')
     parser.add_argument('exp', help='Experiment ID')
     parser.add_argument('--reset-credentials', action='store_true', help='Reset saved credentials')
+    parser.add_argument('--gui', action='store_true', help='Run with GUI (non-headless mode)')
     args = parser.parse_args()
 
     store = CredentialStore()
@@ -71,11 +99,13 @@ def main():
 
     username, password = store.get_credentials()
 
-    driver = setup_driver()
+    driver = setup_driver(headless=not args.gui)
     driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{args.exp}/fileManager')
 
     try:
         login(driver, username, password)
+
+        scroll_to_bottom(driver)
         data = extract_data(driver)
 
         for entry in data:
