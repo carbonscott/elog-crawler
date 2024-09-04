@@ -7,7 +7,7 @@ name = "elog-crawler"
 version = "24.09.02"
 description = "An elog crawler."
 readme = "README.md"
-readme-content-type = "text/markdown"
+readme.content-type = "text/markdown"
 requires-python = ">=3.6"
 authors = [
     { name = "Cong Wang", email = "wangimagine@gmail.com" }
