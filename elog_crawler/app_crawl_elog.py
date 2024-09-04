@@ -109,7 +109,7 @@ def extract_data(driver):
 
 def save_to_csv(data, experiment_id):
     df = pd.DataFrame(data, columns=['Posted', 'Run', 'Content', 'Tags', 'Author'])
-    filename = f'{experiment_id}_logbook.csv'
+    filename = f'{experiment_id}.logbook.csv'
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
 
