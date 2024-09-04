@@ -44,6 +44,15 @@ def login_if_necessary(driver, username, password):
     except NoSuchElementException:
         print("Login elements not found. Page structure might have changed or user is already logged in.")
 
+def is_404_page(driver):
+    try:
+        status_code = driver.execute_script("return window.performance.getEntries()[0].responseStatus")
+        if status_code == 404:
+            return True
+    except Exception:
+        pass
+    return False
+
 def scroll_to_bottom(driver):
     SCROLL_PAUSE_TIME = 1  # Increased pause time to allow content to load
     last_height = driver.execute_script("return document.body.scrollHeight")
@@ -79,6 +88,10 @@ def process_experiment(driver, experiment_id, username, password):
     driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{experiment_id}/eLog')
 
     login_if_necessary(driver, username, password)
+
+    if is_404_page(driver):
+        print(f"Experiment {experiment_id} not found (404 error). Skipping...")
+        return
 
     try:
         scroll_to_bottom(driver)
