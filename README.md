@@ -1,7 +1,7 @@
 ### Install
 
 ```bash
-pip install git+https://https://github.com/carbonscott/elog-crawler
+pip install git+https://github.com/carbonscott/elog-crawler
 ```
 
 
