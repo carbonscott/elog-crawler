@@ -34,6 +34,7 @@ Homepage = "https://github.com/carbonscott/elog-crawler"
 elog-crawler-file-manager = "elog_crawler.app_crawl_file_manager:main"
 elog-crawler-logbook = "elog_crawler.app_crawl_elog:main"
 elog-crawler-info = "elog_crawler.app_crawl_info:main"
+elog-crawler-runtable = "elog_crawler.app_crawl_runtable:main"
 
 [tool.setuptools]
 packages = ["elog_crawler"]
