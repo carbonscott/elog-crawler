@@ -4,7 +4,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 
 import json
@@ -53,14 +53,14 @@ def is_404_page(driver):
     return False
 
 def get_available_tabs(driver):
+    tabs = []
     try:
         # Wait for the iframe to be available
-        WebDriverWait(driver, 10).until(
+        iframe = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "iframe.sitespecific_iframe"))
         )
 
         # Switch to the iframe
-        iframe = driver.find_element(By.CSS_SELECTOR, "iframe.sitespecific_iframe")
         driver.switch_to.frame(iframe)
 
         # Find the tabs within the iframe
@@ -69,13 +69,17 @@ def get_available_tabs(driver):
         )
         tabs = [tab.get_attribute('href').split('#')[-1] for tab in tab_elements]
 
-        # Switch back to the default content
-        driver.switch_to.default_content()
-
-        return tabs
+    except WebDriverException as e:
+        print(f"WebDriver error while getting available tabs: {str(e)}")
     except Exception as e:
         print(f"Error getting available tabs: {str(e)}")
-        return []
+    finally:
+        # Ensure we switch back to default content even if an error occurred
+        try:
+            driver.switch_to.default_content()
+        except:
+            pass
+    return tabs
 
 def scroll_to_bottom(driver):
     SCROLL_PAUSE_TIME = 1  # Increased pause time to allow content to load
@@ -133,6 +137,17 @@ def extract_tab_content(driver, tab_id):
         driver.switch_to.default_content()
         return None
 
+def extract_main_content(driver):
+    try:
+        # Wait for the body to be present
+        body = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        return body.text
+    except Exception as e:
+        print(f"Error extracting main content: {str(e)}")
+        return "Unable to extract main content"
+
 def process_experiment(driver, experiment_id, username, password):
     print(f"Processing experiment: {experiment_id}")
     driver.get(f'https://pswww.slac.stanford.edu/lgbk/lgbk/{experiment_id}/info')
@@ -143,20 +158,36 @@ def process_experiment(driver, experiment_id, username, password):
         print(f"Experiment {experiment_id} not found (404 error). Skipping...")
         return
 
+    experiment_data = {}
     try:
+        # Always extract main content
+        experiment_data["main_content"] = extract_main_content(driver)
+
         available_tabs = get_available_tabs(driver)
         print(f"Available tabs for experiment {experiment_id}: {available_tabs}")
 
-        experiment_data = {}
-        for tab in available_tabs:
-            content = extract_tab_content(driver, tab)
-            if content:
-                experiment_data[tab] = content
+        if available_tabs:
+            experiment_data["tabs"] = {}
+            for tab in available_tabs:
+                content = extract_tab_content(driver, tab)
+                if content:
+                    experiment_data["tabs"][tab] = content
 
-        save_to_json(experiment_data, experiment_id)
+        if not experiment_data["tabs"]:
+            print(f"No tab content could be extracted for experiment {experiment_id}.")
+
     except TimeoutException:
         print(f"Timed out waiting for the content to load for experiment {experiment_id}.")
         driver.save_screenshot(f'timeout_screenshot_{experiment_id}.png')
+        experiment_data["error"] = "Timeout occurred while loading content"
+    except WebDriverException as e:
+        print(f"WebDriver error occurred while processing experiment {experiment_id}: {str(e)}")
+        experiment_data["error"] = f"WebDriver error: {str(e)}"
+    except Exception as e:
+        print(f"Unexpected error occurred while processing experiment {experiment_id}: {str(e)}")
+        experiment_data["error"] = f"Unexpected error: {str(e)}"
+
+    save_to_json(experiment_data, experiment_id)
 
 def save_to_json(data, experiment_id):
     filename = f'{experiment_id}.info.json'
