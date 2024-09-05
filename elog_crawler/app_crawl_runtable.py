@@ -213,13 +213,13 @@ def process_experiment(driver, experiment_id, username, password):
     save_to_json(experiment_data, experiment_id)
 
 def save_to_json(data, experiment_id):
-    filename = f'{experiment_id}.info.json'
+    filename = f'{experiment_id}.runtable.json'
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
     print(f"Data saved to {filename}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Crawl experiment info page.')
+    parser = argparse.ArgumentParser(description='Crawl experiment runtable page.')
     parser.add_argument('experiments', nargs='+', help='Experiment IDs (space-separated)')
     parser.add_argument('--reset-credentials', action='store_true', help='Reset saved credentials')
     parser.add_argument('--gui', action='store_true', help='Run with GUI (non-headless mode)')
