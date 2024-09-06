@@ -87,18 +87,18 @@ class ExperimentDBManager:
 
         # Dictionary mapping file types to processing methods
         self.file_processors = {
-            'info': self.process_info_file,
+            'info'        : self.process_info_file,
             'file_manager': self.process_file_manager,
-            'logbook': self.process_logbook,
-            'runtable': self.process_runtable
+            'logbook'     : self.process_logbook,
+            'runtable'    : self.process_runtable
         }
 
         # Dictionary mapping file extensions to file types
         self.file_types = {
-            '.info.json': 'info',
+            '.info.json'       : 'info',
             '.file_manager.csv': 'file_manager',
-            '.logbook.csv': 'logbook',
-            '.runtable.json': 'runtable'
+            '.logbook.csv'     : 'logbook',
+            '.runtable.json'   : 'runtable'
         }
 
     def create_tables(self):
@@ -127,39 +127,47 @@ class ExperimentDBManager:
 
             CREATE TABLE IF NOT EXISTS Detector (
                 detector_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                experiment_id TEXT,
                 run_number INTEGER,
                 detector_name TEXT,
                 status TEXT,
-                FOREIGN KEY (run_number) REFERENCES Run(run_number)
+                FOREIGN KEY (run_number) REFERENCES Run(run_number),
+                FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
             );
 
             CREATE TABLE IF NOT EXISTS Logbook (
                 log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                experiment_id TEXT,
                 run_number INTEGER,
                 timestamp DATETIME,
                 content TEXT,
                 tags TEXT,
                 author TEXT,
-                FOREIGN KEY (run_number) REFERENCES Run(run_number)
+                FOREIGN KEY (run_number) REFERENCES Run(run_number),
+                FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
             );
 
             CREATE TABLE IF NOT EXISTS DataProduction (
                 production_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                experiment_id TEXT,
                 run_number INTEGER,
                 n_events INTEGER,
                 n_damaged INTEGER,
                 n_dropped INTEGER,
                 prod_start DATETIME,
                 prod_end DATETIME,
-                FOREIGN KEY (run_number) REFERENCES Run(run_number)
+                FOREIGN KEY (run_number) REFERENCES Run(run_number),
+                FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
             );
 
             CREATE TABLE IF NOT EXISTS FileManager (
                 file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                experiment_id TEXT,
                 run_number INTEGER,
                 number_of_files INTEGER,
                 total_size_bytes INTEGER,
-                FOREIGN KEY (run_number) REFERENCES Run(run_number)
+                FOREIGN KEY (run_number) REFERENCES Run(run_number),
+                FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
             );
         ''')
         self.conn.commit()
@@ -232,9 +240,10 @@ class ExperimentDBManager:
         try:
             self.cursor.execute('''
                 INSERT OR REPLACE INTO Detector 
-                (run_number, detector_name, status)
-                VALUES (?, ?, ?)
+                (experiment_id, run_number, detector_name, status)
+                VALUES (?, ?, ?, ?)
             ''', (
+                data.get('experiment_id'),
                 data.get('run_number'),
                 data.get('detector_name'),
                 data.get('status')
@@ -250,9 +259,10 @@ class ExperimentDBManager:
         try:
             self.cursor.execute('''
                 INSERT OR REPLACE INTO Logbook 
-                (run_number, timestamp, content, tags, author)
-                VALUES (?, ?, ?, ?, ?)
+                (experiment_id, run_number, timestamp, content, tags, author)
+                VALUES (?, ?, ?, ?, ?, ?)
             ''', (
+                data.get('experiment_id'),
                 data.get('run_number'),
                 data.get('timestamp'),
                 data.get('content'),
@@ -270,9 +280,10 @@ class ExperimentDBManager:
         try:
             self.cursor.execute('''
                 INSERT OR REPLACE INTO DataProduction 
-                (run_number, n_events, n_damaged, n_dropped, prod_start, prod_end)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (experiment_id, run_number, n_events, n_damaged, n_dropped, prod_start, prod_end)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
+                data.get('experiment_id'),
                 data.get('run_number'),
                 data.get('n_events'),
                 data.get('n_damaged'),
@@ -291,9 +302,10 @@ class ExperimentDBManager:
         try:
             self.cursor.execute('''
                 INSERT OR REPLACE INTO FileManager 
-                (run_number, number_of_files, total_size_bytes)
-                VALUES (?, ?, ?)
+                (experiment_id, run_number, number_of_files, total_size_bytes)
+                VALUES (?, ?, ?, ?)
             ''', (
+                data.get('experiment_id'),
                 data.get('run_number'),
                 data.get('number_of_files'),
                 data.get('total_size_bytes')
@@ -334,12 +346,14 @@ class ExperimentDBManager:
     def process_logbook(self, file_path):
         data = self.parse_csv(file_path)
         if data:
+            experiment_id = os.path.basename(file_path).split('.')[0]
             last_run_number = None
             for row in data:
                 if row['Run']:
                     last_run_number = int(row['Run'])
                 if last_run_number is not None:
                     self.insert_logbook({
+                        'experiment_id': experiment_id,
                         'run_number': last_run_number,
                         'timestamp': row['Posted'],
                         'content': row['Content'],
@@ -353,8 +367,10 @@ class ExperimentDBManager:
     def process_runtable(self, file_path):
         data = self.parse_json(file_path)
         if data:
+            experiment_id = os.path.basename(file_path).split('.')[0]
             for run in data.get('Data Production', []):
                 self.insert_data_production({
+                    'experiment_id': experiment_id,
                     'run_number': run['Run'],
                     'n_events': run['N events'],
                     'n_damaged': run['N damaged'],
@@ -366,6 +382,7 @@ class ExperimentDBManager:
                 for key, value in detector.items():
                     if key != 'Run' and value == 'Checked':
                         self.insert_detector({
+                            'experiment_id': experiment_id,
                             'run_number': detector['Run'],
                             'detector_name': key,
                             'status': value
