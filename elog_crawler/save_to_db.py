@@ -28,42 +28,50 @@ CREATE TABLE Run (
 -- Detector Table (from runtable)
 CREATE TABLE Detector (
     detector_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT,
     run_number INTEGER,
     detector_name TEXT,
     status TEXT,
-    FOREIGN KEY (run_number) REFERENCES Run(run_number)
+    FOREIGN KEY (run_number) REFERENCES Run(run_number),
+    FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
 );
 
 -- Logbook Table
 CREATE TABLE Logbook (
     log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT,
     run_number INTEGER,
     timestamp DATETIME,
     content TEXT,
     tags TEXT,
     author TEXT,
-    FOREIGN KEY (run_number) REFERENCES Run(run_number)
+    FOREIGN KEY (run_number) REFERENCES Run(run_number),
+    FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
 );
 
 -- DataProduction Table (from runtable)
 CREATE TABLE DataProduction (
     production_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT,
     run_number INTEGER,
     n_events INTEGER,
     n_damaged INTEGER,
     n_dropped INTEGER,
     prod_start DATETIME,
     prod_end DATETIME,
-    FOREIGN KEY (run_number) REFERENCES Run(run_number)
+    FOREIGN KEY (run_number) REFERENCES Run(run_number),
+    FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
 );
 
 -- FileManager Table (new table for file manager data)
 CREATE TABLE FileManager (
     file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT,
     run_number INTEGER,
     number_of_files INTEGER,
     total_size_bytes INTEGER,
-    FOREIGN KEY (run_number) REFERENCES Run(run_number)
+    FOREIGN KEY (run_number) REFERENCES Run(run_number),
+    FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
 );
 """
 
