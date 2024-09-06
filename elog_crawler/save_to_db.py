@@ -11,7 +11,18 @@ CREATE TABLE Experiment (
     pi TEXT,
     pi_email TEXT,
     leader_account TEXT,
-    description TEXT
+    description TEXT,
+    slack_channels TEXT,
+    analysis_queues TEXT,
+    urawi_proposal TEXT
+);
+
+CREATE TABLE ExperimentTabs (
+    tab_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT,
+    tab_name TEXT,
+    tab_content TEXT,
+    FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
 );
 
 -- Run Table (combines info from file_manager, runtable, and logbook)
@@ -120,7 +131,18 @@ class ExperimentDBManager:
                 pi TEXT,
                 pi_email TEXT,
                 leader_account TEXT,
-                description TEXT
+                description TEXT,
+                slack_channels TEXT,
+                analysis_queues TEXT,
+                urawi_proposal TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS ExperimentTabs (
+                tab_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                experiment_id TEXT,
+                tab_name TEXT,
+                tab_content TEXT,
+                FOREIGN KEY (experiment_id) REFERENCES Experiment(experiment_id)
             );
 
             CREATE TABLE IF NOT EXISTS Run (
@@ -199,23 +221,58 @@ class ExperimentDBManager:
             logging.error(f"File not found: {file_path}")
             return None
 
+    def parse_main_content(self, main_content):
+        lines = main_content.split('\n')
+        parsed_content = {}
+        current_key = None
+        current_value = []
+
+        for line in lines:
+            if ':' in line:
+                if current_key:
+                    parsed_content[current_key] = ' '.join(current_value).strip()
+                current_key, value = line.split(':', 1)
+                current_key = current_key.strip()
+                current_value = [value.strip()]
+            elif current_key:
+                current_value.append(line.strip())
+
+        if current_key:
+            parsed_content[current_key] = ' '.join(current_value).strip()
+
+        return parsed_content
+
     def insert_experiment(self, data):
         try:
+            main_content = self.parse_main_content(data.get('main_content', ''))
             self.cursor.execute('''
                 INSERT OR REPLACE INTO Experiment 
-                (experiment_id, name, instrument, start_time, end_time, pi, pi_email, leader_account, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (experiment_id, name, instrument, start_time, end_time, pi, pi_email, leader_account, description, slack_channels, analysis_queues, urawi_proposal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data.get('experiment_id'),
-                data.get('name'),
-                data.get('instrument'),
-                data.get('start_time'),
-                data.get('end_time'),
-                data.get('pi'),
-                data.get('pi_email'),
-                data.get('leader_account'),
-                data.get('description')
+                main_content.get('Name'),
+                main_content.get('Instrument'),
+                main_content.get('Start Time'),
+                main_content.get('End Time'),
+                main_content.get('PI'),
+                main_content.get('PI Email'),
+                main_content.get('Leader Account'),
+                main_content.get('Description'),
+                main_content.get('Slack channels'),
+                main_content.get('Analysis Queues'),
+                main_content.get('URAWI Proposal')
             ))
+
+            # Insert tab information
+            tabs = data.get('tabs', {})
+            for tab_name, tab_content in tabs.items():
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO ExperimentTabs
+                    (experiment_id, tab_name, tab_content)
+                    VALUES (?, ?, ?)
+                ''', (data.get('experiment_id'), tab_name, json.dumps(tab_content)))
+
             self.conn.commit()
             logging.info(f"Inserted experiment: {data.get('experiment_id')}")
         except sqlite3.Error as e:
@@ -326,14 +383,22 @@ class ExperimentDBManager:
             logging.error(f"Unexpected error inserting file manager data: {e}")
 
     def process_info_file(self, file_path):
-        data = self.parse_json(file_path)
-        if data:
-            experiment_id = os.path.basename(file_path).split('.')[0]
-            data['experiment_id'] = experiment_id
-            self.insert_experiment(data)
-            logging.info(f"Processed info file: {file_path}")
-        else:
-            logging.warning(f"Failed to process info file: {file_path}")
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+            if data:
+                experiment_id = os.path.basename(file_path).split('.')[0]
+                data['experiment_id'] = experiment_id
+                self.insert_experiment(data)
+                logging.info(f"Processed info file: {file_path}")
+            else:
+                logging.warning(f"No data found in info file: {file_path}")
+        except json.JSONDecodeError:
+            logging.error(f"Error parsing JSON file: {file_path}")
+        except FileNotFoundError:
+            logging.error(f"File not found: {file_path}")
+        except Exception as e:
+            logging.error(f"Unexpected error processing info file: {e}")
 
     def process_file_manager(self, file_path):
         data = self.parse_csv(file_path)
