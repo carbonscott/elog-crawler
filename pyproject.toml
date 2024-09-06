@@ -32,9 +32,10 @@ Homepage = "https://github.com/carbonscott/elog-crawler"
 
 [project.scripts]
 elog-crawler-file-manager = "elog_crawler.app_crawl_file_manager:main"
-elog-crawler-logbook = "elog_crawler.app_crawl_elog:main"
-elog-crawler-info = "elog_crawler.app_crawl_info:main"
-elog-crawler-runtable = "elog_crawler.app_crawl_runtable:main"
+elog-crawler-logbook      = "elog_crawler.app_crawl_elog:main"
+elog-crawler-info         = "elog_crawler.app_crawl_info:main"
+elog-crawler-runtable     = "elog_crawler.app_crawl_runtable:main"
+elog-crawler-save_to_db   = "elog_crawler.save_to_db:main"
 
 [tool.setuptools]
 packages = ["elog_crawler"]
