@@ -405,9 +405,9 @@ class ExperimentDBManager:
         if data:
             experiment_id = os.path.basename(file_path).split('.')[0]
             for row in data:
-                row['experiment_id'] = experiment_id
                 self.insert_run(row)
                 self.insert_file_manager({
+                    'experiment_id' : experiment_id,
                     'run_number': row['Run Number'],
                     'number_of_files': row['Number of Files'],
                     'total_size_bytes': row['Total Size (bytes)']
