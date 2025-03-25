@@ -273,7 +273,7 @@ class ExperimentDBManager:
                     VALUES (?, ?, ?)
                 ''', (data.get('experiment_id'), tab_name, json.dumps(tab_content)))
 
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted experiment: {data.get('experiment_id')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting experiment data: {e}")
@@ -294,7 +294,7 @@ class ExperimentDBManager:
                 data.get('n_events'),
                 data.get('n_damaged')
             ))
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted run: {data.get('Run')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting run data: {e}")
@@ -313,7 +313,7 @@ class ExperimentDBManager:
                 data.get('detector_name'),
                 data.get('status')
             ))
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted detector: {data.get('detector_name')} for run {data.get('run_number')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting detector data: {e}")
@@ -334,7 +334,7 @@ class ExperimentDBManager:
                 data.get('tags'),
                 data.get('author')
             ))
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted logbook entry for run {data.get('run_number')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting logbook data: {e}")
@@ -356,7 +356,7 @@ class ExperimentDBManager:
                 data.get('prod_start'),
                 data.get('prod_end')
             ))
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted data production for run {data.get('run_number')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting data production: {e}")
@@ -375,7 +375,7 @@ class ExperimentDBManager:
                 data.get('number_of_files'),
                 data.get('total_size_bytes')
             ))
-            self.conn.commit()
+            ## self.conn.commit()
             logging.info(f"Inserted file manager data for run {data.get('run_number')}")
         except sqlite3.Error as e:
             logging.error(f"Error inserting file manager data: {e}")
@@ -444,12 +444,12 @@ class ExperimentDBManager:
             for run in data.get('Data Production', []):
                 self.insert_data_production({
                     'experiment_id': experiment_id,
-                    'run_number': run['Run'],
-                    'n_events': run['N events'],
-                    'n_damaged': run['N damaged'],
-                    'n_dropped': run['N dropped'],
-                    'prod_start': run['Prod Start'],
-                    'prod_end': run['Prod End']
+                    'run_number'   : run.get('Run', None),
+                    'n_events'     : run.get('N events', None),
+                    'n_damaged'    : run.get('N damaged', None),
+                    'n_dropped'    : run.get('N dropped', None),
+                    'prod_start'   : run.get('Prod Start', None),
+                    'prod_end'     : run.get('Prod End', None),
                 })
             for detector in data.get('Detectors', []):
                 for key, value in detector.items():
@@ -468,7 +468,14 @@ class ExperimentDBManager:
         file_type = self.get_file_type(file_path)
         processor = self.file_processors.get(file_type)
         if processor:
-            processor(file_path)
+            self.conn.execute('BEGIN TRANSACTION')
+            try:
+                processor(file_path)
+                self.conn.commit()
+                logging.info(f"Successfully processed and committed: {file_path}")
+            except Exception as e:
+                self.conn.rollback()
+                logging.error(f"Error processing {file_path}, transaction rolled back: {e}")
         else:
             logging.warning(f"Unknown file type: {file_path}")
 
