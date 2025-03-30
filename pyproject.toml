@@ -36,6 +36,7 @@ elog-crawler-logbook      = "elog_crawler.app_crawl_elog:main"
 elog-crawler-info         = "elog_crawler.app_crawl_info:main"
 elog-crawler-runtable     = "elog_crawler.app_crawl_runtable:main"
 elog-crawler-save_to_db   = "elog_crawler.save_to_db:main"
+elog-crawler-update_db    = "elog_crawler.update_db:main"
 
 [tool.setuptools]
 packages = ["elog_crawler"]
