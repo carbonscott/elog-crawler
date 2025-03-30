@@ -139,11 +139,39 @@ def extract_tab_content(driver, tab_id):
 
 def extract_main_content(driver):
     try:
-        # Wait for the body to be present
-        body = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
-        return body.text
+        # Look for the experiment details directly - first try specific div if it exists
+        try:
+            exp_details = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".exp_details, div[id*='details'], table.experiment-info"))
+            )
+            return exp_details.text
+        except (TimeoutException, NoSuchElementException):
+            # If specific selector fails, try finding by key labels that are visible in the screenshot
+            # Look for elements containing labels like "Instrument:", "Start Time:", etc.
+            key_labels = ["Instrument:", "Start Time:", "End Time:", "PI:", "Leader Account:"]
+            content_parts = []
+
+            for label in key_labels:
+                try:
+                    # Find elements containing each label
+                    elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{label}')]")
+                    if elements:
+                        # For each found element, get its parent or container to capture both label and value
+                        for element in elements:
+                            parent = element.find_element(By.XPATH, "./ancestor::tr") if "tr" in element.tag_name else element.find_element(By.XPATH, "./parent::*")
+                            content_parts.append(parent.text)
+                except:
+                    continue
+
+            if content_parts:
+                return "\n".join(content_parts)
+
+            # Last resort - fall back to original method
+            body = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            return body.text
+
     except Exception as e:
         print(f"Error extracting main content: {str(e)}")
         return "Unable to extract main content"
