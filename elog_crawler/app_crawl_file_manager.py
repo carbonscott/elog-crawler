@@ -109,8 +109,8 @@ def extract_data(driver):
         run_number = row.get_attribute('data-spgntr')
         num_files = row.find_element(By.CSS_SELECTOR, 'div.col-md-3.text-start').text
         num_bytes = row.find_element(By.CSS_SELECTOR, 'div.col-md-2.text-start').text
-        num_bytes = humanfriendly.parse_size(num_bytes)
-        data.append([int(run_number), int(num_files), num_bytes])
+        num_bytes = humanfriendly.parse_size(num_bytes or '0 B')
+        data.append([int(run_number), int(num_files or '0'), num_bytes])
     return data
 
 def save_to_csv(data, experiment_id):
