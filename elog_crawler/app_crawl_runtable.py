@@ -99,14 +99,20 @@ def extract_data_production(driver):
         # Find the table within the scrolled content
         table = table_container.find_element(By.CSS_SELECTOR, "table.table-striped")
 
-        # Extract table headers
-        headers = []
+        # Extract table headers with their data-col-idx attributes
+        headers_with_idx = []
         header_rows = table.find_elements(By.TAG_NAME, "tr")[:2]  # Get the first two rows as headers
         for row in header_rows:
             for th in row.find_elements(By.TAG_NAME, "th"):
                 header_text = th.text.strip()
-                if header_text and header_text not in headers:
-                    headers.append(header_text)
+                if header_text:
+                    col_idx = th.get_attribute("data-col-idx")
+                    if col_idx is not None:
+                        headers_with_idx.append((header_text, int(col_idx)))
+
+        # Sort headers by their data-col-idx
+        headers_with_idx.sort(key=lambda x: x[1])
+        headers = [h[0] for h in headers_with_idx]
 
         # Extract table rows
         rows = []
@@ -115,9 +121,12 @@ def extract_data_production(driver):
             if run_num:
                 cells = row.find_elements(By.TAG_NAME, "td")
                 row_data = {"Run": run_num}
-                for i, cell in enumerate(cells):
-                    if i < len(headers):
-                        row_data[headers[i]] = cell.text.strip()
+
+                # Match cells with headers based on data-col-idx
+                for i, (header, idx) in enumerate(headers_with_idx):
+                    if i < len(cells):
+                        row_data[header] = cells[idx].text.strip()
+
                 rows.append(row_data)
 
         return rows
