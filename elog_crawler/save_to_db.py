@@ -227,16 +227,38 @@ class ExperimentDBManager:
         current_key = None
         current_value = []
 
-        for line in lines:
-            if ':' in line:
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Check if this line defines a new key (ends with a colon)
+            if line.endswith(':'):
+                # Save previous key-value pair if exists
                 if current_key:
                     parsed_content[current_key] = ' '.join(current_value).strip()
-                current_key, value = line.split(':', 1)
-                current_key = current_key.strip()
-                current_value = [value.strip()]
-            elif current_key:
-                current_value.append(line.strip())
 
+                # Set new key (remove the trailing colon)
+                current_key = line[:-1].strip()
+                current_value = []
+
+                # Look ahead to the next line for the value
+                i += 1
+                while i < len(lines) and not lines[i].endswith(':'):
+                    current_value.append(lines[i].strip())
+                    i += 1
+
+                # Step back one since we'll increment in the main loop
+                if i < len(lines):
+                    i -= 1
+            else:
+                # If line doesn't define a key but there's a current key,
+                # add it to the current value
+                if current_key:
+                    current_value.append(line)
+
+            i += 1
+
+        # Don't forget to add the last key-value pair
         if current_key:
             parsed_content[current_key] = ' '.join(current_value).strip()
 
