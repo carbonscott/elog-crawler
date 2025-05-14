@@ -235,7 +235,7 @@ class DatabaseUpdater(ExperimentDBManager):
             if data:
                 experiment_id = os.path.basename(file_path).split('.')[0]
                 data['experiment_id'] = experiment_id
-                self.update_experiment(data)  # Use update instead of insert
+                self.update_experiment(data)
                 logging.info(f"Processed info file: {file_path}")
             else:
                 logging.warning(f"No data found in info file: {file_path}")
@@ -254,12 +254,12 @@ class DatabaseUpdater(ExperimentDBManager):
                 run_data = {
                     'experiment_id': experiment_id,
                     'Run': row['Run Number'],
-                    'start_time': None,  # We don't have this info from file_manager
+                    'start_time': None,
                     'end_time': None,
                     'n_events': None,
                     'n_damaged': None
                 }
-                self.update_run(run_data)  # Use update instead of insert
+                self.update_run(run_data)
 
                 file_manager_data = {
                     'experiment_id': experiment_id,
@@ -267,7 +267,7 @@ class DatabaseUpdater(ExperimentDBManager):
                     'number_of_files': row['Number of Files'],
                     'total_size_bytes': row['Total Size (bytes)']
                 }
-                self.update_file_manager(file_manager_data)  # Use update instead of insert
+                self.update_file_manager(file_manager_data)
             logging.info(f"Processed file manager: {file_path}")
         else:
             logging.warning(f"Failed to process file manager: {file_path}")
@@ -289,7 +289,7 @@ class DatabaseUpdater(ExperimentDBManager):
                         'tags': row['Tags'],
                         'author': row['Author']
                     }
-                    self.update_logbook(logbook_data)  # Use update instead of insert
+                    self.update_logbook(logbook_data)
             logging.info(f"Processed logbook: {file_path}")
         else:
             logging.warning(f"Failed to process logbook: {file_path}")
@@ -301,6 +301,16 @@ class DatabaseUpdater(ExperimentDBManager):
 
             # Process Data Production
             for run in data.get('Data Production', []):
+                run_data = {
+                    'experiment_id': experiment_id,
+                    'Run': run.get('Run', None),  # Match the key expected by update_run
+                    'start_time': None,  # Could be populated if available in your data
+                    'end_time': None,
+                    'n_events': run.get('N events', None),
+                    'n_damaged': run.get('N damaged', None)
+                }
+                self.update_run(run_data)
+
                 data_production_data = {
                     'experiment_id': experiment_id,
                     'run_number': run.get('Run', None),
@@ -310,7 +320,7 @@ class DatabaseUpdater(ExperimentDBManager):
                     'prod_start': run.get('Prod Start', None),
                     'prod_end': run.get('Prod End', None),
                 }
-                self.update_data_production(data_production_data)  # Use update instead of insert
+                self.update_data_production(data_production_data)
 
             # Process Detectors
             for detector in data.get('Detectors', []):
@@ -322,7 +332,7 @@ class DatabaseUpdater(ExperimentDBManager):
                             'detector_name': key,
                             'status': value
                         }
-                        self.update_detector(detector_data)  # Use update instead of insert
+                        self.update_detector(detector_data)
 
             logging.info(f"Processed runtable: {file_path}")
         else:

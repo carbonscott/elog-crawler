@@ -464,6 +464,14 @@ class ExperimentDBManager:
         if data:
             experiment_id = os.path.basename(file_path).split('.')[0]
             for run in data.get('Data Production', []):
+                self.insert_run({
+                    'experiment_id': experiment_id,
+                    'Run': run.get('Run'),
+                    'start_time': None,
+                    'end_time': None,
+                    'n_events': run.get('N events'),
+                    'n_damaged': run.get('N damaged')
+                })
                 self.insert_data_production({
                     'experiment_id': experiment_id,
                     'run_number'   : run.get('Run', None),
